@@ -78,7 +78,7 @@ JMImageCache *_sharedCache = nil;
 
 		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
-			UIImage *i = [[[UIImage alloc] initWithData:data] autorelease];
+			UIImage *i = [[UIImage alloc] initWithData:data];
 
 			NSString* cachePath = cachePathForURL(url);
 			NSInvocation* writeInvocation = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:@selector(writeData:toPath:)]];
@@ -105,7 +105,7 @@ JMImageCache *_sharedCache = nil;
 
 
 - (UIImage *) imageFromDiskForURL:(NSString *)url {
-	UIImage *i = [[[UIImage alloc] initWithData:[NSData dataWithContentsOfFile:cachePathForURL(url) options:0 error:NULL]] autorelease];
+	UIImage *i = [[UIImage alloc] initWithData:[NSData dataWithContentsOfFile:cachePathForURL(url) options:0 error:NULL]];
 
 	return i;
 }
@@ -137,13 +137,7 @@ JMImageCache *_sharedCache = nil;
 - (void) performDiskWriteOperation:(NSInvocation *)invoction {
 	NSInvocationOperation *operation = [[NSInvocationOperation alloc] initWithInvocation:invoction];
 	[_diskOperationQueue addOperation:operation];
-	[operation release];
 }
 
-
-- (void) dealloc {
-	[_diskOperationQueue release];
-	[super dealloc];
-}
 
 @end

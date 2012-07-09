@@ -103,6 +103,47 @@ JMImageCache *_sharedCache = nil;
 	}
 }
 
+- (UIImage *)imageForURL:(NSString *)url completion:(void (^)(UIImage *image))completion {
+    if(!url) {
+		return nil;
+	}
+    
+	id returner = [super objectForKey:url];
+    
+	if(returner) {
+		return returner;
+	} else {
+		UIImage *i = [self imageFromDiskForURL:url];
+		if(i) {
+			[self setImage:i forURL:url];
+            
+			return i;
+		}
+        
+		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
+			UIImage *i = [[UIImage alloc] initWithData:data];
+            
+			NSString* cachePath = cachePathForURL(url);
+			NSInvocation* writeInvocation = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:@selector(writeData:toPath:)]];
+			[writeInvocation setTarget:self];
+			[writeInvocation setSelector:@selector(writeData:toPath:)];
+			[writeInvocation setArgument:&data atIndex:2];
+			[writeInvocation setArgument:&cachePath atIndex:3];
+            
+			[self performDiskWriteOperation:writeInvocation];
+			[self setImage:i forURL:url];
+            
+			dispatch_async(dispatch_get_main_queue(), ^{
+				if(completion) {
+                    completion(i);
+                }
+			});
+		});
+        
+		return nil;
+	}
+}
 
 - (UIImage *) imageFromDiskForURL:(NSString *)url {
 	UIImage *i = [[UIImage alloc] initWithData:[NSData dataWithContentsOfFile:cachePathForURL(url) options:0 error:NULL]];

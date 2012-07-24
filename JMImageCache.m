@@ -28,7 +28,6 @@ static inline NSString* cachePathForURL(NSString* key) {
 	return [JMImageCacheDirectory() stringByAppendingPathComponent:keyForURL(key)];
 }
 
-
 JMImageCache *_sharedCache = nil;
 
 @implementation JMImageCache
@@ -41,6 +40,14 @@ JMImageCache *_sharedCache = nil;
 	return _sharedCache;
 }
 
++ (dispatch_queue_t)downloadQueue {
+    static dispatch_queue_t jmDownloadQueue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        jmDownloadQueue = dispatch_queue_create("com.jmimagecache.downloadqueue", NULL);
+    });
+    return jmDownloadQueue;
+}
 
 - (id) init {
 	if((self = [super init])) {
@@ -76,7 +83,7 @@ JMImageCache *_sharedCache = nil;
 			return i;
 		}
 
-		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+		dispatch_async([JMImageCache downloadQueue], ^{
 			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
 			UIImage *i = [[UIImage alloc] initWithData:data];
 
@@ -119,14 +126,14 @@ JMImageCache *_sharedCache = nil;
             
 			return i;
 		}
-        
-		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        __weak JMImageCache *weakSelf = self;
+		dispatch_async([JMImageCache downloadQueue], ^{
 			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
 			UIImage *i = [[UIImage alloc] initWithData:data];
             
 			NSString* cachePath = cachePathForURL(url);
-			NSInvocation* writeInvocation = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:@selector(writeData:toPath:)]];
-			[writeInvocation setTarget:self];
+			NSInvocation* writeInvocation = [NSInvocation invocationWithMethodSignature:[weakSelf methodSignatureForSelector:@selector(writeData:toPath:)]];
+			[writeInvocation setTarget:weakSelf];
 			[writeInvocation setSelector:@selector(writeData:toPath:)];
 			[writeInvocation setArgument:&data atIndex:2];
 			[writeInvocation setArgument:&cachePath atIndex:3];

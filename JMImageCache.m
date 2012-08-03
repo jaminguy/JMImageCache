@@ -49,7 +49,7 @@ JMImageCache *_sharedCache = nil;
     static dispatch_queue_t jmDownloadQueue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        jmDownloadQueue = dispatch_queue_create("com.jmimagecache.downloadqueue", NULL);
+        jmDownloadQueue = dispatch_queue_create("com.jmimagecache.downloadqueue", DISPATCH_QUEUE_CONCURRENT);
     });
     return jmDownloadQueue;
 }
@@ -156,8 +156,8 @@ JMImageCache *_sharedCache = nil;
 			[writeInvocation setArgument:&data atIndex:2];
 			[writeInvocation setArgument:&cachePath atIndex:3];
             
-			[self performDiskWriteOperation:writeInvocation];
-			[self setImage:i forURL:url];
+			[weakSelf performDiskWriteOperation:writeInvocation];
+			[weakSelf setImage:i forURL:url];
             
 			dispatch_async(dispatch_get_main_queue(), ^{
 				if(completion) {

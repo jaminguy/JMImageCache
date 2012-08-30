@@ -8,6 +8,11 @@
 
 #import "JMImageCache.h"
 
+NSString * const JMImageCacheDownloadStartNotification = @"JMImageCacheDownloadStart";
+NSString * const JMImageCacheDownloadStopNotification = @"JMImageCacheDownloadStop";
+NSString * const JMImageCacheDownloadURLKey = @"url";
+
+
 static NSString* _JMImageCacheDirectory;
 
 static inline NSString* JMImageCacheDirectory() {
@@ -92,6 +97,7 @@ JMImageCache *_sharedCache = nil;
                 [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStartNotification object:self userInfo:infoDictionary];
             });
 			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
+            [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStopNotification object:self userInfo:infoDictionary];
 			UIImage *i = [[UIImage alloc] initWithData:data];
             
 			NSString* cachePath = cachePathForURL(url);
@@ -143,6 +149,11 @@ JMImageCache *_sharedCache = nil;
             });
             
 			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStopNotification object:self userInfo:infoDictionary];
+            });
+            
 			UIImage *i = [[UIImage alloc] initWithData:data];
             
 			NSString* cachePath = cachePathForURL(url);
@@ -152,8 +163,8 @@ JMImageCache *_sharedCache = nil;
 			[writeInvocation setArgument:&data atIndex:2];
 			[writeInvocation setArgument:&cachePath atIndex:3];
             
-			[self performDiskWriteOperation:writeInvocation];
-			[self setImage:i forURL:url];
+			[weakSelf performDiskWriteOperation:writeInvocation];
+			[weakSelf setImage:i forURL:url];
             
 			dispatch_async(dispatch_get_main_queue(), ^{
                 [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStopNotification object:self userInfo:infoDictionary];

@@ -6,6 +6,10 @@
 //  Copyright 2011 Rubber Duck Software. All rights reserved.
 //
 
+extern NSString * const JMImageCacheDownloadStartNotification;
+extern NSString * const JMImageCacheDownloadStopNotification;
+extern NSString * const JMImageCacheDownloadURLKey;
+
 @class JMImageCache;
 
 @protocol JMImageCacheDelegate <NSObject>

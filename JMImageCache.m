@@ -32,6 +32,8 @@ JMImageCache *_sharedCache = nil;
 
 @implementation JMImageCache
 
+#define kMaxConcurrentImageDownloads 20
+
 + (JMImageCache *) sharedCache {
 	if(!_sharedCache) {
 		_sharedCache = [[JMImageCache alloc] init];
@@ -40,11 +42,12 @@ JMImageCache *_sharedCache = nil;
 	return _sharedCache;
 }
 
-+ (dispatch_queue_t)downloadQueue {
-    static dispatch_queue_t jmDownloadQueue;
++ (NSOperationQueue *)downloadQueue {
+    static NSOperationQueue *jmDownloadQueue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        jmDownloadQueue = dispatch_queue_create("com.jmimagecache.downloadqueue", NULL);
+        jmDownloadQueue = [[NSOperationQueue alloc] init];
+        jmDownloadQueue.maxConcurrentOperationCount = kMaxConcurrentImageDownloads;
     });
     return jmDownloadQueue;
 }
@@ -83,28 +86,33 @@ JMImageCache *_sharedCache = nil;
 			return i;
 		}
 
-		dispatch_async([JMImageCache downloadQueue], ^{
+        [[JMImageCache downloadQueue] addOperationWithBlock:^{
+            NSDictionary *infoDictionary = [NSDictionary dictionaryWithObject:url forKey:JMImageCacheDownloadURLKey];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStartNotification object:self userInfo:infoDictionary];
+            });
 			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
 			UIImage *i = [[UIImage alloc] initWithData:data];
-
+            
 			NSString* cachePath = cachePathForURL(url);
 			NSInvocation* writeInvocation = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:@selector(writeData:toPath:)]];
 			[writeInvocation setTarget:self];
 			[writeInvocation setSelector:@selector(writeData:toPath:)];
 			[writeInvocation setArgument:&data atIndex:2];
 			[writeInvocation setArgument:&cachePath atIndex:3];
-
+            
 			[self performDiskWriteOperation:writeInvocation];
 			[self setImage:i forURL:url];
-
+            
 			dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStopNotification object:self userInfo:infoDictionary];
 				if(d) {
 					if([d respondsToSelector:@selector(cache:didDownloadImage:forURL:)]) {
 						[d cache:self didDownloadImage:i forURL:url];
 					}
 				}
 			});
-		});
+        }];
 
 		return nil;
 	}
@@ -126,8 +134,14 @@ JMImageCache *_sharedCache = nil;
             
 			return i;
 		}
+        
         __weak JMImageCache *weakSelf = self;
-		dispatch_async([JMImageCache downloadQueue], ^{
+		[[JMImageCache downloadQueue] addOperationWithBlock:^{
+            NSDictionary *infoDictionary = [NSDictionary dictionaryWithObject:url forKey:@"url"];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStartNotification object:self userInfo:infoDictionary];
+            });
+            
 			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
 			UIImage *i = [[UIImage alloc] initWithData:data];
             
@@ -142,11 +156,12 @@ JMImageCache *_sharedCache = nil;
 			[self setImage:i forURL:url];
             
 			dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:JMImageCacheDownloadStopNotification object:self userInfo:infoDictionary];
 				if(completion) {
                     completion(i);
                 }
 			});
-		});
+		}];
         
 		return nil;
 	}

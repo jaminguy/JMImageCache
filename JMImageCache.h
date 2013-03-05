@@ -42,4 +42,6 @@
 - (void) writeData:(NSData *)data toPath:(NSString *)path;
 - (void) performDiskWriteOperation:(NSInvocation *)invoction;
 
+- (void) removeAllFilesOlderThanDate:(NSDate *)date;
+
 @end

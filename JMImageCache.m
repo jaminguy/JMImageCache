@@ -196,7 +196,13 @@ JMImageCache *_sharedCache = nil;
 }
 
 - (UIImage *) imageFromDiskForKey:(NSString *)key {
+    NSString *path = cachePathForKey(key);
 	UIImage *i = [[UIImage alloc] initWithData:[NSData dataWithContentsOfFile:cachePathForKey(key) options:0 error:NULL]];
+    if (i) {
+        NSFileManager *fileManager = [[NSFileManager alloc] init];
+        NSDate *oldDate = [NSDate date];
+        [fileManager setAttributes:@{NSFileModificationDate:oldDate} ofItemAtPath:path error:NULL];
+    }
 	return i;
 }
 
@@ -232,6 +238,24 @@ JMImageCache *_sharedCache = nil;
 	NSInvocationOperation *operation = [[NSInvocationOperation alloc] initWithInvocation:invoction];
     
 	[self.diskOperationQueue addOperation:operation];
+}
+
+- (void) removeAllFilesOlderThanDate:(NSDate *)date {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSFileManager *fileManager = [[NSFileManager alloc] init];
+        NSDirectoryEnumerator *directoryEnumerator = [fileManager enumeratorAtPath:JMImageCacheDirectory()];
+        NSString *file;
+        while (file = [directoryEnumerator nextObject]) {
+            NSError *error = nil;
+            NSString *filepath = [NSString stringWithFormat:[JMImageCacheDirectory() stringByAppendingPathComponent:file]];
+            NSDate *modifiedDate = [[fileManager attributesOfItemAtPath:filepath error:&error] fileModificationDate];
+            if(error == nil) {
+                if ([modifiedDate compare:date] == NSOrderedAscending) {
+                    [fileManager removeItemAtPath:filepath error:&error];
+                }
+            }
+        }
+    });
 }
 
 @end

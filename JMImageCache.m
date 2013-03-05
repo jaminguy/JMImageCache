@@ -200,8 +200,7 @@ JMImageCache *_sharedCache = nil;
 	UIImage *i = [[UIImage alloc] initWithData:[NSData dataWithContentsOfFile:cachePathForKey(key) options:0 error:NULL]];
     if (i) {
         NSFileManager *fileManager = [[NSFileManager alloc] init];
-        NSDate *oldDate = [NSDate date];
-        [fileManager setAttributes:@{NSFileModificationDate:oldDate} ofItemAtPath:path error:NULL];
+        [fileManager setAttributes:@{NSFileModificationDate:[NSDate date]} ofItemAtPath:path error:NULL];
     }
 	return i;
 }
@@ -247,7 +246,7 @@ JMImageCache *_sharedCache = nil;
         NSString *file;
         while (file = [directoryEnumerator nextObject]) {
             NSError *error = nil;
-            NSString *filepath = [NSString stringWithFormat:[JMImageCacheDirectory() stringByAppendingPathComponent:file]];
+            NSString *filepath = [JMImageCacheDirectory() stringByAppendingPathComponent:file];
             NSDate *modifiedDate = [[fileManager attributesOfItemAtPath:filepath error:&error] fileModificationDate];
             if(error == nil) {
                 if ([modifiedDate compare:date] == NSOrderedAscending) {

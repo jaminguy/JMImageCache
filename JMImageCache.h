@@ -3,39 +3,43 @@
 //  JMCache
 //
 //  Created by Jake Marsh on 2/7/11.
-//  Copyright 2011 Rubber Duck Software. All rights reserved.
+//  Copyright 2011 Jake Marsh. All rights reserved.
 //
 
-extern NSString * const JMImageCacheDownloadStartNotification;
-extern NSString * const JMImageCacheDownloadStopNotification;
-extern NSString * const JMImageCacheDownloadURLKey;
+#import "UIImageView+JMImageCache.h"
 
 @class JMImageCache;
 
 @protocol JMImageCacheDelegate <NSObject>
 
 @optional
-- (void) cache:(JMImageCache *)c didDownloadImage:(UIImage *)i forURL:(NSString *)url;
+- (void) cache:(JMImageCache *)c didDownloadImage:(UIImage *)i forURL:(NSURL *)url;
+- (void) cache:(JMImageCache *)c didDownloadImage:(UIImage *)i forURL:(NSURL *)url key:(NSString*)key;
 
 @end
 
-@interface JMImageCache : NSCache {
-	
-@private
-	
-	NSOperationQueue *_diskOperationQueue;
-}
+@interface JMImageCache : NSCache
 
 + (JMImageCache *) sharedCache;
 
-- (UIImage *) imageForURL:(NSString *)url delegate:(id<JMImageCacheDelegate>)d;
-- (UIImage *) imageForURL:(NSString *)url completion:(void (^)(UIImage *image))completion;
-- (UIImage *) imageFromDiskForURL:(NSString *)url;
+- (void) imageForURL:(NSURL *)url key:(NSString *)key completionBlock:(void (^)(UIImage *image))completion;
+- (void) imageForURL:(NSURL *)url completionBlock:(void (^)(UIImage *image))completion;
 
-- (void) setImage:(UIImage *)i forURL:(NSString *)url;
+- (UIImage *) cachedImageForKey:(NSString *)key;
+- (UIImage *) cachedImageForURL:(NSURL *)url;
+
+- (UIImage *) imageForURL:(NSURL *)url key:(NSString*)key delegate:(id<JMImageCacheDelegate>)d;
+- (UIImage *) imageForURL:(NSURL *)url delegate:(id<JMImageCacheDelegate>)d;
+
+- (UIImage *) imageFromDiskForKey:(NSString *)key;
+- (UIImage *) imageFromDiskForURL:(NSURL *)url;
+
+- (void) setImage:(UIImage *)i forKey:(NSString *)key;
+- (void) setImage:(UIImage *)i forURL:(NSURL *)url;
+- (void) removeImageForKey:(NSString *)key;
 - (void) removeImageForURL:(NSString *)url;
 
-- (void) writeData:(NSData*)data toPath:(NSString *)path;
+- (void) writeData:(NSData *)data toPath:(NSString *)path;
 - (void) performDiskWriteOperation:(NSInvocation *)invoction;
 
 @end
